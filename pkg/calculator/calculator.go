@@ -1,4 +1,4 @@
-package main
+package calculator
 
 import (
 	"fmt"
@@ -212,13 +212,12 @@ func Calc(expression string) (float64, error) {
 		return 0.0, fmt.Errorf(err1.Error())
 	}
 	return result, nil
-	return 0.0, fmt.Errorf("Sequence is empty")
 }
 
-func main() {
-	// exp := "3 + 1"
-	// exp := "(10 * 3) + 5"
-	// exp := "2 / 5"
-	exp := "3 * 6"
-	fmt.Println(Calc(exp))
-}
+// func main() {
+// 	// exp := "3 + 1"
+// 	// exp := "(10 * 3) + 5"
+// 	// exp := "2 / 5"
+// 	exp := "3 * 6"
+// 	fmt.Println(Calc(exp))
+// }

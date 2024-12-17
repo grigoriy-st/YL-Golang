@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/pashapdev/calc_go/pkg/calculation"
 )
 
 type Config struct {
