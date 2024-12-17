@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/grigoriy-st/YL-Golang/pkg/calculator"
 )
 
 type Config struct {
@@ -54,9 +56,9 @@ func (a *Application) Run() error {
 			return nil
 		}
 		//вычисляем выражение
-		result, err := calculation.Calc(text)
+		result, err := calculator.Calc(text)
 		if err != nil {
-			log.Println(text, " calculation failed wit error: ", err)
+			log.Println(text, " calculator failed wit error: ", err)
 		} else {
 			log.Println(text, "=", result)
 		}
@@ -76,9 +78,9 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := calculation.Calc(request.Expression)
+	result, err := calculator.Calc(request.Expression)
 	if err != nil {
-		if errors.Is(err, calculation.ErrInvalidExpression) {
+		if errors.Is(err, calculator.ErrInvalidExpression) {
 			fmt.Fprintf(w, "err: %s", err.Error())
 		} else {
 			fmt.Fprintf(w, "unknown err")
