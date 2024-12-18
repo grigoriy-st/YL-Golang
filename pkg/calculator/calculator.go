@@ -1,7 +1,6 @@
 package calculator
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -10,20 +9,20 @@ func ExecuteBinOps(seq []string, pos int, sign string) (string, error) {
 	// выполняет выражение и возвращает его в слайс
 	first, err := strconv.ParseFloat(seq[pos-1], 64)
 	if err != nil {
-		return "", fmt.Errorf("error error in conversion %v", err)
+		return "", ErrConvertingNumberToFloatType
 	}
 	second, err1 := strconv.ParseFloat(seq[pos+1], 64)
 	if err1 != nil {
-		return "", fmt.Errorf("error error in conversion %v", err)
+		return "", ErrConvertingNumberToFloatType
 	}
 	var result float64
-
+	// выполнений операций над двумя операндами
 	switch sign {
 	case "*":
 		result = first * second
 	case "/":
 		if second == 0 {
-			return "", fmt.Errorf("Devision by zero")
+			return "", ErrDivisionByZero
 		}
 		result = first / second
 	case "-":
@@ -46,7 +45,7 @@ func SearchingForExpByPriority(seq []string) (string, error) {
 			if string(seq[i]) == "*" || string(seq[i]) == "/" {
 				resSimpleSeq, err := ExecuteBinOps(seq, i, string(seq[i])) // seq, индекс операции, операция
 				if err != nil {
-					return "", fmt.Errorf(err.Error())
+					return "", err
 				}
 				var tempSeq = []string{}
 				tempSeq = append(tempSeq, seq[:i-1]...)
@@ -62,7 +61,7 @@ func SearchingForExpByPriority(seq []string) (string, error) {
 			if string(seq[i]) == "+" || string(seq[i]) == "-" {
 				resSimpleSeq, err := ExecuteBinOps(seq, i, string(seq[i]))
 				if err != nil {
-					return "", fmt.Errorf(err.Error())
+					return "", err
 				}
 
 				var tempSeq []string
@@ -103,13 +102,13 @@ func SolveExpression(exp []string) (float64, error) {
 				}
 			}
 			if indexLeftBracket == -1 || indexRightBracket == -1 {
-				return 0.0, fmt.Errorf("incorrect sequence of parentheses")
+				return 0.0, ErrIncorrectSeqOfParenthese
 			}
 
 			tempExp := exp[indexLeftBracket+1 : indexRightBracket] // передача выражения вместе со скобками
 			resultExp, err := SearchingForExpByPriority(tempExp)
 			if err != nil {
-				return 0.0, fmt.Errorf(err.Error())
+				return 0.0, err
 			}
 			var tempExpression []string
 			tempExpression = append(tempExpression, exp[:indexLeftBracket]...)
@@ -119,12 +118,11 @@ func SolveExpression(exp []string) (float64, error) {
 			exp = tempExpression
 		} else {
 			break
-
 		}
 	}
 	tempExp, err := SearchingForExpByPriority(exp)
 	if err != nil {
-		return 0.0, fmt.Errorf("Error in conversation: %v", err)
+		return 0.0, err
 	}
 	result, _ := strconv.ParseFloat(tempExp, 64)
 	return result, nil
@@ -158,7 +156,7 @@ func StrToSlice(str string) ([]string, error) {
 				tempNum = []string{}
 			}
 		} else {
-			return []string{}, fmt.Errorf("Invalid sign")
+			return []string{}, ErrInvalidExpression
 		}
 	}
 
@@ -166,50 +164,49 @@ func StrToSlice(str string) ([]string, error) {
 }
 
 func IsRightSequence(seq []string) (bool, error) {
+	// функция проверки строки на правильную последовательность выражений
 	prevSign := string(seq[0])
 	length_seq := len(seq)
 
 	for i := 1; i < len(seq); i++ {
 		if strings.Contains("*/+-", prevSign) && strings.Contains("*/+-", string(seq[i])) {
-			return false, fmt.Errorf("There are two operators in a row")
+			return false, ErrTwoOperatorsInRow
 		}
 		if strings.Contains("1234567890.", prevSign) && strings.Contains("1234567890.", string(seq[i])) {
-			return false, fmt.Errorf("There are two operands in a row")
+			return false, ErrTwoOperandsInRow
 		}
 		prevSign = string(seq[i])
 	}
 	if strings.Contains("*/+-", string(seq[0])) {
-		return false, fmt.Errorf("The expression begins with an operation")
+		return false, ErrExpStartsWithOperator
 	}
 	if strings.Contains("*/+-", string(seq[length_seq-1])) {
-		return false, fmt.Errorf("The expression ends with an operation")
+		return false, ErrExpEndsWithOperator
 	}
 	return true, nil
 }
 
 func Calc(expression string) (float64, error) {
-
-	if strings.Contains(expression, ")") {
-		if strings.Count(expression, ")") != strings.Count(expression, ")") {
-			return 0.0, fmt.Errorf("Different number of brackets")
-		}
+	// основная функция расчёта	
+	if strings.Count(expression, ")") != strings.Count(expression, "(") {
+		return 0.0, ErrDiffNumberOfBrackets
 	}
 	parts, err := StrToSlice(expression)
 	if err != nil {
-		return 0.0, fmt.Errorf(err.Error())
+		return 0.0, err
 	}
 
 	if len(parts) < 3 {
-		return 0.0, fmt.Errorf("Incorrect Sequence")
+		return 0.0, ErrInvalidExpression
 	}
 	_, err = IsRightSequence(parts)
 	if err != nil {
-		return 0.0, fmt.Errorf(err.Error())
+		return 0.0, err
 	}
 
 	result, err1 := SolveExpression(parts)
 	if err1 != nil {
-		return 0.0, fmt.Errorf(err1.Error())
+		return 0.0, err
 	}
 	return result, nil
 }
@@ -218,6 +215,6 @@ func Calc(expression string) (float64, error) {
 // 	// exp := "3 + 1"
 // 	// exp := "(10 * 3) + 5"
 // 	// exp := "2 / 5"
-// 	exp := "3 * 6"
+// 	exp := "3)6"
 // 	fmt.Println(Calc(exp))
 // }

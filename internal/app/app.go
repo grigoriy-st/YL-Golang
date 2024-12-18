@@ -69,6 +69,14 @@ type Request struct {
 	Expression string `json:"expression"`
 }
 
+type Response struct {
+	Result string `json:"result"`
+}
+
+type Error struct {
+	Error string `json:"error"`
+}
+
 func CalcHandler(w http.ResponseWriter, r *http.Request) {
 	request := new(Request)
 	defer r.Body.Close()
@@ -82,8 +90,26 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, calculator.ErrInvalidExpression) {
 			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrInvalidExpression) {
+			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrDivisionByZero) {
+			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrIncorrectSeqOfParenthese) {
+			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrDiffNumberOfBrackets) {
+			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrConvertingNumberToFloatType) {
+			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrTwoOperatorsInRow) {
+			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrTwoOperandsInRow) {
+			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrExpStartsWithOperator) {
+			fmt.Fprintf(w, "err: %s", err.Error())
+		} else if errors.Is(err, calculator.ErrExpEndsWithOperator) {
+			fmt.Fprintf(w, "err: %s", err.Error())
 		} else {
-			fmt.Fprintf(w, "unknown err")
+			fmt.Fprintf(w, "Unknown err")
 		}
 
 	} else {
@@ -92,6 +118,6 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Application) RunServer() error {
-	http.HandleFunc("/", CalcHandler)
+	http.HandleFunc("/api/v1/calculate", CalcHandler)
 	return http.ListenAndServe(":"+a.config.Addr, nil)
 }
