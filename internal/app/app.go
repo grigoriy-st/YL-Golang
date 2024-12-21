@@ -86,34 +86,38 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var response Response
 	result, err := calculator.Calc(request.Expression)
 	if err != nil {
-		if errors.Is(err, calculator.ErrInvalidExpression) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrInvalidExpression) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrDivisionByZero) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrIncorrectSeqOfParenthese) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrDiffNumberOfBrackets) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrConvertingNumberToFloatType) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrTwoOperatorsInRow) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrTwoOperandsInRow) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrExpStartsWithOperator) {
-			fmt.Fprintf(w, "err: %s", err.Error())
-		} else if errors.Is(err, calculator.ErrExpEndsWithOperator) {
-			fmt.Fprintf(w, "err: %s", err.Error())
+		var responseErr Error
+		if errors.Is(err, calculator.ErrInvalidExpression) ||
+			errors.Is(err, calculator.ErrInvalidExpression) ||
+			errors.Is(err, calculator.ErrIncorrectSeqOfParenthese) ||
+			errors.Is(err, calculator.ErrDiffNumberOfBrackets) ||
+			errors.Is(err, calculator.ErrConvertingNumberToFloatType) ||
+			errors.Is(err, calculator.ErrTwoOperatorsInRow) ||
+			errors.Is(err, calculator.ErrTwoOperandsInRow) ||
+			errors.Is(err, calculator.ErrExpStartsWithOperator) ||
+			errors.Is(err, calculator.ErrExpEndsWithOperator) {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			responseErr = Error{Error: fmt.Sprintf("%v", err.Error())}
+			json.NewEncoder(w).Encode(responseErr)
+		} else if errors.Is(err, calculator.ErrDivisionByZero) { // деление на ноль
+			w.WriteHeader(http.StatusInternalServerError)
+			responseErr = Error{Error: fmt.Sprintf("%v", err.Error())}
+			json.NewEncoder(w).Encode(responseErr)
 		} else {
-			fmt.Fprintf(w, "Unknown err")
+			// обработка других ошибок
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			responseErr = Error{Error: fmt.Sprintf("%s", "Unknown error")}
+			json.NewEncoder(w).Encode(responseErr)
 		}
 
 	} else {
-		fmt.Fprintf(w, "result: %f", result)
+		// Успешный ответ
+		w.WriteHeader(http.StatusOK)
+		response = Response{Result: fmt.Sprintf("%f", result)}
+		json.NewEncoder(w).Encode(response)
 	}
 }
 

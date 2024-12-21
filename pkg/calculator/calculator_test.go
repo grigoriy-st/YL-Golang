@@ -14,13 +14,13 @@ func TestCalc(t *testing.T) {
 	}{
 		{
 			name:           "simple",
-			expression:     "1+1",
-			expectedResult: 2,
+			expression:     "2+2",
+			expectedResult: 4,
 		},
 		{
 			name:           "priority",
-			expression:     "(2+2)*2",
-			expectedResult: 8,
+			expression:     "(2+2)*4",
+			expectedResult: 16,
 		},
 		{
 			name:           "priority",
