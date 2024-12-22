@@ -128,6 +128,29 @@ func SolveExpression(exp []string) (float64, error) {
 	return result, nil
 }
 
+func IsRightSequence(seq []string) (bool, error) {
+	// функция проверки строки на правильную последовательность выражений
+	prevSign := string(seq[0])
+	length_seq := len(seq)
+
+	for i := 1; i < len(seq); i++ {
+		if strings.Contains("*/+-(", prevSign) && strings.Contains("*/+-", string(seq[i])) {
+			return false, ErrTwoOperatorsInRow
+		}
+		if strings.Contains("1234567890.", prevSign) && strings.Contains("1234567890.", string(seq[i])) {
+			return false, ErrTwoOperandsInRow
+		}
+		prevSign = string(seq[i])
+	}
+	if strings.Contains("*/+-", string(seq[0])) {
+		return false, ErrExpStartsWithOperator
+	}
+	if strings.Contains("*/+-", string(seq[length_seq-1])) {
+		return false, ErrExpEndsWithOperator
+	}
+	return true, nil
+}
+
 func StrToSlice(str string) ([]string, error) {
 	// преобразование строки в слайс
 	result := []string{}
@@ -159,31 +182,7 @@ func StrToSlice(str string) ([]string, error) {
 			return []string{}, ErrInvalidExpression
 		}
 	}
-
 	return result, nil
-}
-
-func IsRightSequence(seq []string) (bool, error) {
-	// функция проверки строки на правильную последовательность выражений
-	prevSign := string(seq[0])
-	length_seq := len(seq)
-
-	for i := 1; i < len(seq); i++ {
-		if strings.Contains("*/+-", prevSign) && strings.Contains("*/+-", string(seq[i])) {
-			return false, ErrTwoOperatorsInRow
-		}
-		if strings.Contains("1234567890.", prevSign) && strings.Contains("1234567890.", string(seq[i])) {
-			return false, ErrTwoOperandsInRow
-		}
-		prevSign = string(seq[i])
-	}
-	if strings.Contains("*/+-", string(seq[0])) {
-		return false, ErrExpStartsWithOperator
-	}
-	if strings.Contains("*/+-", string(seq[length_seq-1])) {
-		return false, ErrExpEndsWithOperator
-	}
-	return true, nil
 }
 
 func Calc(expression string) (float64, error) {

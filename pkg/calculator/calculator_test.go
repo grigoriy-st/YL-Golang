@@ -14,8 +14,8 @@ func TestCalc(t *testing.T) {
 	}{
 		{
 			name:           "simple",
-			expression:     "2+2",
-			expectedResult: 4,
+			expression:     "10+11",
+			expectedResult: 21,
 		},
 		{
 			name:           "priority",
@@ -24,13 +24,13 @@ func TestCalc(t *testing.T) {
 		},
 		{
 			name:           "priority",
-			expression:     "2+2*2",
-			expectedResult: 6,
+			expression:     "2+2*3",
+			expectedResult: 8,
 		},
 		{
 			name:           "/",
-			expression:     "1/2",
-			expectedResult: 0.5,
+			expression:     "5/2",
+			expectedResult: 2.5,
 		},
 	}
 
@@ -53,7 +53,7 @@ func TestCalc(t *testing.T) {
 	}{
 		{
 			name:       "simple",
-			expression: "1+1*",
+			expression: "10+5/",
 		},
 		{
 			name:       "priority",
@@ -61,7 +61,7 @@ func TestCalc(t *testing.T) {
 		},
 		{
 			name:       "priority",
-			expression: "((2+2-*(2",
+			expression: "((30+10-/(2",
 		},
 		{
 			name:       "/",
