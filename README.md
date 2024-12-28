@@ -38,6 +38,11 @@ Arithmetic Expression Calculator API — это простой веб-серви
 git clone https://github.com/grigoriy-st/YL-Golang.git
 cd YL-Golang
 ```
+# Запуск сервиса
+
+```bash
+go run cmd/main.go
+```
 
 # Отправка успешных запросов 
 ```bash
