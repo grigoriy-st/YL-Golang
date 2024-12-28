@@ -39,13 +39,17 @@ git clone https://github.com/grigoriy-st/YL-Golang.git
 cd YL-Golang
 ```
 
-# Отправка простых запросов
+# Отправка успешных запросов 
 ```bash
 curl --location 'http://localhost:8080/api/v1/calculate' \
 --header 'Content-Type: application/json' \
 --data '{
   "expression": "2+2*2"
 }'
+```
+Результат:
+```bash
+{"result":"4.000000"}
 ```
 
 ```bash
@@ -55,11 +59,22 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
   "expression": "10*(4-2)/5"
 }'
 ```
+Результат:
+```bash
+{"result":"4.000000"}
+```
+
+# Отправка неудачных запросов 
 
 ```bash
 curl --location 'http://localhost:8080/api/v1/calculate' \
 --header 'Content-Type: application/json' \
 --data '{
-  "expression": "10*(40/2)/2"
+  "expression": "10(+10)"
 }'
 ```
+Результат:
+```
+{"error":"Two operators in a row"}
+```
+
