@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/grigoriy-st/YL-Golang/pkg/calculator"
 )
@@ -36,32 +37,88 @@ func New() *Application {
 	}
 }
 
+// Структура выражения
+type Expression struct {
+	id     int     `json:"id"`
+	exp    string  `json:"exp"`
+	status string  `json:status`
+	result float64 `json:result`
+}
+
+// Буфер задач
+type SeqTasksBuffer struct {
+	m         sync.Mutex
+	buffer    []Expression
+	idCounter int
+}
+
+// Возврат и удаление задачи
+func (s *SeqTasksBuffer) popTask() (Expression, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	bufLenght := len(s.buffer)
+	if bufLenght > 0 {
+		last_exp := s.buffer[bufLenght-1]
+		s.buffer = s.buffer[:bufLenght-1]
+		return last_exp, nil
+	}
+	return Expression{}, fmt.Errorf("Error in pop task")
+}
+
+// Добавление новой задачи в буфер
+func (s *SeqTasksBuffer) appendTask(task string) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	s.buffer = append(s.buffer, Expression{s.getIdForTask(), task, "Proccesed", 0.0})
+}
+
+func (s *SeqTasksBuffer) getIdForTask() int {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	s.idCounter++
+	return s.idCounter
+}
+
 // Функция запуска приложения
 // тут будем чиать введенную строку и после нажатия ENTER писать результат работы программы на экране
 // если пользователь ввел exit - то останаваливаем приложение
 func (a *Application) Run() error {
+	buffer := SeqTasksBuffer{}
 	for {
 		// читаем выражение для вычисления из командной строки
 		log.Println("input expression")
-		reader := bufio.NewReader(os.Stdin)
-		text, err := reader.ReadString('\n')
-		if err != nil {
-			log.Println("failed to read expression from console")
-		}
-		// убираем пробелы, чтобы оставить только вычислемое выражение
-		text = strings.TrimSpace(text)
-		// выходим, если ввели команду "exit"
-		if text == "exit" {
-			log.Println("aplication was successfully closed")
-			return nil
-		}
+		go func() {
+			reader := bufio.NewReader(os.Stdin)
+
+			text, err := reader.ReadString('\n')
+			if err != nil {
+				log.Println("failed to read expression from console")
+			}
+			// убираем пробелы, чтобы оставить только вычислемое выражение
+			text = strings.TrimSpace(text)
+			// выходим, если ввели команду "exit"
+			if text == "exit" {
+				log.Println("aplication was successfully closed")
+				return
+			}
+			buffer.appendTask(text)
+		}()
 		//вычисляем выражение
-		result, err := calculator.Calc(text)
-		if err != nil {
-			log.Println(text, " calculator failed wit error: ", err)
-		} else {
-			log.Println(text, "=", result)
-		}
+		go func() {
+			exp, err := buffer.popTask()
+			if exp.status != "Proccesed" || err != nil {
+				fmt.Errorf("Error in pop task")
+			}
+			result, err := calculator.Calc(exp.exp)
+			if err != nil {
+				log.Println(exp.exp, " calculator failed wit error: ", err)
+			} else {
+				log.Println(exp.exp, "=", result)
+			}
+		}()
 	}
 }
 
@@ -77,7 +134,14 @@ type Error struct {
 	Error string `json:"error"`
 }
 
+// Обработчик выражений.
+// Перенаправляет выражение в функцию, которая его вычсиляет
 func CalcHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	request := new(Request)
 	defer r.Body.Close()
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -86,38 +150,46 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var response Response
-	result, err := calculator.Calc(request.Expression)
-	if err != nil {
-		var responseErr Error
-		if errors.Is(err, calculator.ErrInvalidExpression) ||
-			errors.Is(err, calculator.ErrInvalidExpression) ||
-			errors.Is(err, calculator.ErrIncorrectSeqOfParenthese) ||
-			errors.Is(err, calculator.ErrDiffNumberOfBrackets) ||
-			errors.Is(err, calculator.ErrConvertingNumberToFloatType) ||
-			errors.Is(err, calculator.ErrTwoOperatorsInRow) ||
-			errors.Is(err, calculator.ErrTwoOperandsInRow) ||
-			errors.Is(err, calculator.ErrExpStartsWithOperator) ||
-			errors.Is(err, calculator.ErrExpEndsWithOperator) {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			responseErr = Error{Error: fmt.Sprintf("%v", err.Error())}
-			json.NewEncoder(w).Encode(responseErr)
-		} else if errors.Is(err, calculator.ErrDivisionByZero) { // деление на ноль
-			w.WriteHeader(http.StatusInternalServerError)
-			responseErr = Error{Error: fmt.Sprintf("%v", err.Error())}
-			json.NewEncoder(w).Encode(responseErr)
-		} else {
-			// обработка других ошибок
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			responseErr = Error{Error: fmt.Sprintf("%s", "Unknown error")}
-			json.NewEncoder(w).Encode(responseErr)
+	resultChan := make(chan *Response)
+	errorChan := make(chan *Error)
+
+	// var response Response
+	go func() {
+		result, err := calculator.Calc(request.Expression)
+		if err != nil {
+			// var responseErr Error
+			if errors.Is(err, calculator.ErrInvalidExpression) ||
+				errors.Is(err, calculator.ErrIncorrectSeqOfParenthese) ||
+				errors.Is(err, calculator.ErrDiffNumberOfBrackets) ||
+				errors.Is(err, calculator.ErrConvertingNumberToFloatType) ||
+				errors.Is(err, calculator.ErrTwoOperatorsInRow) ||
+				errors.Is(err, calculator.ErrTwoOperandsInRow) ||
+				errors.Is(err, calculator.ErrExpStartsWithOperator) ||
+				errors.Is(err, calculator.ErrExpEndsWithOperator) {
+				errorChan <- &Error{Error: fmt.Sprintf("%v", err.Error())}
+			} else if errors.Is(err, calculator.ErrDivisionByZero) {
+				errorChan <- &Error{Error: fmt.Sprintf("%v", err.Error())}
+			} else {
+				errorChan <- &Error{Error: "Unknown error"}
+			}
+			return
 		}
 
-	} else {
-		// Успешный ответ
+		response := &Response{Result: fmt.Sprintf("%f", result)}
+		resultChan <- response
+	}()
+
+	select {
+	case response := <-resultChan:
 		w.WriteHeader(http.StatusOK)
-		response = Response{Result: fmt.Sprintf("%f", result)}
 		json.NewEncoder(w).Encode(response)
+	case responseErr := <-errorChan:
+		if responseErr.Error == "division by zero" {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+		}
+		json.NewEncoder(w).Encode(responseErr)
 	}
 }
 

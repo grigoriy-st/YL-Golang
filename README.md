@@ -1,7 +1,6 @@
-# YL-Golang
-The project for the course "Programming in Go" from Yandex Lyceum
-
 # Arithmetic Expression Calculator API
+
+Это проект арифметического калькулятора из курса Яндекс Лицея под названием "Программирование на Go"
 
 ## Описание
 
@@ -11,6 +10,7 @@ Arithmetic Expression Calculator API — это простой веб-серви
 
 (краткое описание файла calculator.go)
 Вычисления выполняются проходя несколько функций:
+
 - **Calc()** - главная функция, вызывающая остальные функции
 - **CaStrToSlice()** - преобразует строку в слайс символов
 - **CaIsRightSequence()** - проверяет слайс символов на правильную последовательность выражений
@@ -39,7 +39,8 @@ git clone https://github.com/grigoriy-st/YL-Golang.git
 cd YL-Golang
 ```
 
-# Отправка простых запросов
+## Отправка простых запросов
+
 ```bash
 curl --location 'http://localhost:8080/api/v1/calculate' \
 --header 'Content-Type: application/json' \
