@@ -49,6 +49,7 @@ go run cmd/main.go
 ```
 
 # Отправка успешных запросов 
+
 >>>>>>> 63ccc3569e649e51fe63336b19eee05249596226
 ```bash
 curl --location 'http://localhost:8080/api/v1/calculate' \
@@ -58,6 +59,7 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
 }'
 ```
 Результат:
+
 ```bash
 {"result":"4.000000"}
 ```

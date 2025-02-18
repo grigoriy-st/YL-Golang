@@ -154,24 +154,14 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 	resultChan := make(chan *Response)
 	errorChan := make(chan *Error)
 
-	// var response Response
 	go func() {
 		result, err := calculator.Calc(request.Expression)
+		fmt.Println(result, err)
 		if err != nil {
-			// var responseErr Error
-			if errors.Is(err, calculator.ErrInvalidExpression) ||
-				errors.Is(err, calculator.ErrIncorrectSeqOfParenthese) ||
-				errors.Is(err, calculator.ErrDiffNumberOfBrackets) ||
-				errors.Is(err, calculator.ErrConvertingNumberToFloatType) ||
-				errors.Is(err, calculator.ErrTwoOperatorsInRow) ||
-				errors.Is(err, calculator.ErrTwoOperandsInRow) ||
-				errors.Is(err, calculator.ErrExpStartsWithOperator) ||
-				errors.Is(err, calculator.ErrExpEndsWithOperator) {
-				errorChan <- &Error{Error: fmt.Sprintf("%v", err.Error())}
-			} else if errors.Is(err, calculator.ErrDivisionByZero) {
-				errorChan <- &Error{Error: fmt.Sprintf("%v", err.Error())}
+			if errors.Is(err, calculator.ErrDivisionByZero) {
+				errorChan <- &Error{Error: "division by zero"}
 			} else {
-				errorChan <- &Error{Error: "Unknown error"}
+				errorChan <- &Error{Error: fmt.Sprintf("%v", err.Error())}
 			}
 			return
 		}

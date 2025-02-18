@@ -6,6 +6,7 @@ import (
 
 func main() {
 	app := app.New()
-	// app.Run()
-	app.RunServer()
+	app.Run()
+
+	// app.RunServer()
 }

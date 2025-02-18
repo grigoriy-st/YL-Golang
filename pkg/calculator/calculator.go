@@ -1,6 +1,7 @@
 package calculator
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -22,6 +23,7 @@ func ExecuteBinOps(seq []string, pos int, sign string) (string, error) {
 		result = first * second
 	case "/":
 		if second == 0 {
+			fmt.Println(ErrDivisionByZero)
 			return "", ErrDivisionByZero
 		}
 		result = first / second
@@ -44,7 +46,9 @@ func SearchingForExpByPriority(seq []string) (string, error) {
 		for i := 0; i < len(seq); i++ {
 			if string(seq[i]) == "*" || string(seq[i]) == "/" {
 				resSimpleSeq, err := ExecuteBinOps(seq, i, string(seq[i])) // seq, индекс операции, операция
+
 				if err != nil {
+					fmt.Printf("Error from SearchingForExpByPriority: %s, %v", resSimpleSeq, err)
 					return "", err
 				}
 				var tempSeq = []string{}
@@ -88,6 +92,9 @@ func IsExpContainBrackets(exp []string) bool {
 
 func SolveExpression(exp []string) (float64, error) {
 	// основная функция решения всего выражения
+
+	// resultChan := make(chan Result)
+
 	for len(exp) != 1 {
 		if IsExpContainBrackets(exp) {
 			indexLeftBracket := -1
@@ -186,7 +193,7 @@ func StrToSlice(str string) ([]string, error) {
 }
 
 func Calc(expression string) (float64, error) {
-	// основная функция расчёта	
+	// основная функция расчёта
 	if strings.Count(expression, ")") != strings.Count(expression, "(") {
 		return 0.0, ErrDiffNumberOfBrackets
 	}
