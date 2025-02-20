@@ -192,9 +192,9 @@ func StrToSlice(str string) ([]string, error) {
 }
 
 // Основная функция расчёта
-func Calc(expression string) (float64, error) {
-	exp := expression
-	if strings.Count(expression, ")") != strings.Count(expression, "(") {
+func Calc(e *Expression) (float64, error) {
+
+	if strings.Count(expression.exp, ")") != strings.Count(expression, "(") {
 		return 0.0, ErrDiffNumberOfBrackets
 	}
 	parts, err := StrToSlice(expression)
