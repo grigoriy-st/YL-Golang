@@ -37,14 +37,6 @@ func New() *Application {
 	}
 }
 
-// Структура выражения
-type Expression struct {
-	id     int     `json:"id"`
-	exp    string  `json:"exp"`
-	status string  `json:status`
-	result float64 `json:result`
-}
-
 // Буфер задач
 type SeqTasksBuffer struct {
 	m         sync.Mutex
@@ -153,7 +145,7 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 
 	resultChan := make(chan *Response)
 	errorChan := make(chan *Error)
-
+	expForCalc := E
 	go func() {
 		result, err := calculator.Calc(request.Expression)
 		fmt.Println(result, err)

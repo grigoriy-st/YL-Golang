@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
+// Выполняет выражение и возвращает его в слайс
 func ExecuteBinOps(seq []string, pos int, sign string) (string, error) {
-	// выполняет выражение и возвращает его в слайс
 	first, err := strconv.ParseFloat(seq[pos-1], 64)
 	if err != nil {
 		return "", ErrConvertingNumberToFloatType
@@ -39,8 +39,9 @@ func ExecuteBinOps(seq []string, pos int, sign string) (string, error) {
 	return out, nil
 }
 
+// Поиск операций по приоритету
 func SearchingForExpByPriority(seq []string) (string, error) {
-	// поиск операций по приоритету
+
 	for len(seq) != 1 {
 		// Выполнение приоритетных операций
 		for i := 0; i < len(seq); i++ {
@@ -80,8 +81,8 @@ func SearchingForExpByPriority(seq []string) (string, error) {
 	return seq[0], nil
 }
 
+// Проверка на содержание скобок
 func IsExpContainBrackets(exp []string) bool {
-	// Проверка на содержание скобок
 	for _, val := range exp {
 		if val == ")" || val == "(" {
 			return true
@@ -90,11 +91,9 @@ func IsExpContainBrackets(exp []string) bool {
 	return false
 }
 
+// основная функция решения всего выражения
 func SolveExpression(exp []string) (float64, error) {
-	// основная функция решения всего выражения
-
 	// resultChan := make(chan Result)
-
 	for len(exp) != 1 {
 		if IsExpContainBrackets(exp) {
 			indexLeftBracket := -1
@@ -135,8 +134,8 @@ func SolveExpression(exp []string) (float64, error) {
 	return result, nil
 }
 
+// Проверка строки на правильную последовательность выражений
 func IsRightSequence(seq []string) (bool, error) {
-	// функция проверки строки на правильную последовательность выражений
 	prevSign := string(seq[0])
 	length_seq := len(seq)
 
@@ -158,8 +157,8 @@ func IsRightSequence(seq []string) (bool, error) {
 	return true, nil
 }
 
+// Преобразование строки в слайс
 func StrToSlice(str string) ([]string, error) {
-	// преобразование строки в слайс
 	result := []string{}
 	tempNum := []string{}
 	lenghtSeq := len(str)
@@ -192,8 +191,9 @@ func StrToSlice(str string) ([]string, error) {
 	return result, nil
 }
 
+// Основная функция расчёта
 func Calc(expression string) (float64, error) {
-	// основная функция расчёта
+	exp := expression
 	if strings.Count(expression, ")") != strings.Count(expression, "(") {
 		return 0.0, ErrDiffNumberOfBrackets
 	}
