@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/grigoriy-st/YL-Golang/internal/app"
+	"calc/internal/app"
 )
 
 func main() {

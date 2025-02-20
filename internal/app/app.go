@@ -68,7 +68,7 @@ func (a *Application) Run() error {
 			if exp.Status != "Proccesed" || err != nil {
 				fmt.Errorf("Error in pop task")
 			}
-			result, err := calculator.Calc(exp)
+			result, err := calculator.Calc(&exp)
 			if err != nil {
 				log.Println(exp.Exp, " calculator failed wit error: ", err)
 			} else {
@@ -116,7 +116,7 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 		buffer.AppendTask(request.Expression)
 		exp, _ := buffer.PopTask()
 
-		result, err := calculator.Calc(exp.Exp)
+		result, err := calculator.Calc(&exp)
 
 		if err != nil {
 			if errors.Is(err, calculator.ErrDivisionByZero) {
