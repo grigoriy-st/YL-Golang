@@ -43,15 +43,13 @@ func (s *SeqTasksBuffer) PopTask() (Expression, error) {
 func (s *SeqTasksBuffer) AppendTask(task string) {
 	s.m.Lock()
 	defer s.m.Unlock()
-
+	fmt.Println("Добавление новой задачи в буфер")
 	s.buffer = append(s.buffer, Expression{s.GetIdForTask(), task, "Proccesed", 0.0})
 }
 
 // Получение уникального идентификатора
 func (s *SeqTasksBuffer) GetIdForTask() int {
-	s.m.Lock()
-	defer s.m.Unlock()
-
+	fmt.Println("Генерирование уникального идентиффикатора")
 	s.idCounter++
 	return s.idCounter
 }

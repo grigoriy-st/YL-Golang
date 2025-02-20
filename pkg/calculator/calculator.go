@@ -194,7 +194,7 @@ func StrToSlice(str string) ([]string, error) {
 
 // Основная функция расчёта
 func Calc(e *models.Expression) (float64, error) {
-
+	fmt.Println("Зашел в Calc")
 	if strings.Count(e.Exp, ")") != strings.Count(e.Exp, "(") {
 		return 0.0, ErrDiffNumberOfBrackets
 	}
