@@ -2,6 +2,7 @@ package app
 
 import (
 	"bufio"
+	"calc/models"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,7 +41,7 @@ func New() *Application {
 // тут будем чиать введенную строку и после нажатия ENTER писать результат работы программы на экране
 // если пользователь ввел exit - то останаваливаем приложение
 func (a *Application) Run() error {
-	buffer := SeqTasksBuffer{}
+	buffer := models.SeqTasksBuffer{}
 	for {
 		// читаем выражение для вычисления из командной строки
 		log.Println("input expression")
@@ -58,19 +59,20 @@ func (a *Application) Run() error {
 				log.Println("aplication was successfully closed")
 				return
 			}
-			buffer.appendTask(text)
+
+			buffer.AppendTask(text)
 		}()
 		//вычисляем выражение
 		go func() {
-			exp, err := buffer.popTask()
-			if exp.status != "Proccesed" || err != nil {
+			exp, err := buffer.PopTask()
+			if exp.Status != "Proccesed" || err != nil {
 				fmt.Errorf("Error in pop task")
 			}
-			result, err := calculator.Calc(exp.exp)
+			result, err := calculator.Calc(exp)
 			if err != nil {
-				log.Println(exp.exp, " calculator failed wit error: ", err)
+				log.Println(exp.Exp, " calculator failed wit error: ", err)
 			} else {
-				log.Println(exp.exp, "=", result)
+				log.Println(exp.Exp, "=", result)
 			}
 		}()
 	}
@@ -108,13 +110,13 @@ func CalcHandler(w http.ResponseWriter, r *http.Request) {
 	resultChan := make(chan *Response)
 	errorChan := make(chan *Error)
 
-	buffer := SeqTasksBuffer{}
+	buffer := models.SeqTasksBuffer{}
 
 	go func() {
-		buffer.appendTask(request.Expression)
-		exp, _ := buffer.popTask()
+		buffer.AppendTask(request.Expression)
+		exp, _ := buffer.PopTask()
 
-		result, err := calculator.Calc(&exp)
+		result, err := calculator.Calc(exp.Exp)
 
 		if err != nil {
 			if errors.Is(err, calculator.ErrDivisionByZero) {

@@ -7,14 +7,15 @@ import (
 
 // Структура выражения
 type Expression struct {
-	id     int     `json:"id"`
-	exp    string  `json:"exp"`
-	status string  `json:status`
-	result float64 `json:result`
+	Id     int     `json:"id"`
+	Exp    string  `json:"exp"`
+	Status string  `json:status`
+	Result float64 `json:result`
 }
 
+// Создание нового выражения
 func (e *Expression) NewExpression(exp string) Expression {
-	return Expression{exp: exp}
+	return Expression{Exp: exp}
 }
 
 // Буфер задач
@@ -25,7 +26,7 @@ type SeqTasksBuffer struct {
 }
 
 // Возврат и удаление задачи
-func (s *SeqTasksBuffer) popTask() (Expression, error) {
+func (s *SeqTasksBuffer) PopTask() (Expression, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -39,15 +40,15 @@ func (s *SeqTasksBuffer) popTask() (Expression, error) {
 }
 
 // Добавление новой задачи в буфер
-func (s *SeqTasksBuffer) appendTask(task string) {
+func (s *SeqTasksBuffer) AppendTask(task string) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	s.buffer = append(s.buffer, Expression{s.getIdForTask(), task, "Proccesed", 0.0})
+	s.buffer = append(s.buffer, Expression{s.GetIdForTask(), task, "Proccesed", 0.0})
 }
 
 // Получение уникального идентификатора
-func (s *SeqTasksBuffer) getIdForTask() int {
+func (s *SeqTasksBuffer) GetIdForTask() int {
 	s.m.Lock()
 	defer s.m.Unlock()
 

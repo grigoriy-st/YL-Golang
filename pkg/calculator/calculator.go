@@ -1,6 +1,7 @@
 package calculator
 
 import (
+	"calc/models"
 	"fmt"
 	"strconv"
 	"strings"
@@ -192,12 +193,12 @@ func StrToSlice(str string) ([]string, error) {
 }
 
 // Основная функция расчёта
-func Calc(e *Expression) (float64, error) {
+func Calc(e *models.Expression) (float64, error) {
 
-	if strings.Count(expression.exp, ")") != strings.Count(expression, "(") {
+	if strings.Count(e.Exp, ")") != strings.Count(e.Exp, "(") {
 		return 0.0, ErrDiffNumberOfBrackets
 	}
-	parts, err := StrToSlice(expression)
+	parts, err := StrToSlice(e.Exp)
 	if err != nil {
 		return 0.0, err
 	}
