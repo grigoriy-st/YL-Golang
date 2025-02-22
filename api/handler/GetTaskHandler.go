@@ -9,20 +9,19 @@ import (
 	"net/http"
 )
 
-// Обработчик выражений.
-// Перенаправляет выражение в функцию, которая его вычсиляет
-func CalcHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Only POST method is allowed in Server mode", http.StatusMethodNotAllowed)
+// Обработчик запроса одной задачи
+func GetTaskHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only Get method is allowed in Server mode", http.StatusMethodNotAllowed)
 		return
 	}
-	fmt.Println("Начал обработку в CalcHandler")
+	// fmt.Println("Начал обработку в CalcHandler")
 	w.Header().Set("Content-Type", "application/json")
 	request := new(models.Request)
-	fmt.Println("Создал запрос")
+	// fmt.Println("Создал запрос")
 	defer r.Body.Close()
 	err := json.NewDecoder(r.Body).Decode(&request)
-	fmt.Println("Декодирую ответ")
+	// fmt.Println("Декодирую ответ")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

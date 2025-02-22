@@ -79,42 +79,8 @@ func (a *Application) Run() error {
 	}
 }
 
-// for {
-// 	// читаем выражение для вычисления из командной строки
-// 	log.Println("input expression")
-// 	go func() {
-// 		reader := bufio.NewReader(os.Stdin)
-
-// 		text, err := reader.ReadString('\n')
-// 		if err != nil {
-// 			log.Println("failed to read expression from console")
-// 		}
-// 		// убираем пробелы, чтобы оставить только вычислемое выражение
-// 		text = strings.TrimSpace(text)
-// 		// выходим, если ввели команду "exit"
-// 		if text == "exit" {
-// 			log.Println("aplication was successfully closed")
-// 			return
-// 		}
-
-// 		buffer.AppendTask(text)
-// 	}()
-// 	//вычисляем выражение
-// 	go func() {
-// 		exp, err := buffer.PopTask()
-// 		if exp.Status != "Proccesed" || err != nil {
-// 			fmt.Errorf("Error in pop task")
-// 		}
-// 		result, err := calculator.Calc(&exp)
-// 		if err != nil {
-// 			log.Println(exp.Exp, " calculator failed wit error: ", err)
-// 		} else {
-// 			log.Println(exp.Exp, "=", result)
-// 		}
-// 	}()
-// }
-
 func (a *Application) RunServer() error {
 	http.HandleFunc("/api/v1/calculate", handler.CalcHandler)
+	http.HandleFunc("/internal/tasks", handler.GetTaskHandler)
 	return http.ListenAndServe(":"+a.Config.Addr, nil)
 }
