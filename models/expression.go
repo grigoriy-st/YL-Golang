@@ -34,6 +34,7 @@ func (s *SeqTasksBuffer) PopTask() (Expression, error) {
 	if bufLenght > 0 {
 		last_exp := s.buffer[bufLenght-1]
 		s.buffer = s.buffer[:bufLenght-1]
+		last_exp.Status = "Finished"
 		return last_exp, nil
 	}
 	return Expression{}, fmt.Errorf("Error in pop task")
@@ -44,10 +45,10 @@ func (s *SeqTasksBuffer) AppendTask(task string) {
 	s.m.Lock()
 	defer s.m.Unlock()
 	fmt.Println("Добавление новой задачи в буфер")
-	s.buffer = append(s.buffer, Expression{s.GetIdForTask(), task, "Proccesed", 0.0})
+	s.buffer = append(s.buffer, Expression{s.GetIdForTask(), task, "Being processed", 0.0})
 }
 
-// Получение уникального идентификатора
+// Получение уникального идентификатора для задачи
 func (s *SeqTasksBuffer) GetIdForTask() int {
 	fmt.Println("Генерирование уникального идентиффикатора")
 	s.idCounter++
