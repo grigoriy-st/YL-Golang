@@ -15,7 +15,7 @@ func (o *Orchestrator) CheckBuffer() {
 }
 
 // Дробление выражение на задачи
-func (o *Orchestrator) ParseExpIntoTasks(exp string) {
+func (o *Orchestrator) ParseExpIntoTasks(exp string) models.Task, error {
 	tokens := tokenize(exp)
 	rpn := shuntingYard(tokens)
 	return convertToTasks(rpn), nil
@@ -77,7 +77,7 @@ func isNumber(token string) bool {
 func convertToTasks(rpn []string) []models.Task {
 	var stack []models.Task
 	var tasks []models.Task
-	taskBuffer := NewSeqTasksBuffer(100)
+	taskBuffer := models.NewSeqTasksBuffer(100)
 
 	for _, token := range rpn {
 		if isNumber(token) {
