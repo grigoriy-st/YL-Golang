@@ -4,98 +4,80 @@ import (
 	"bytes"
 	"calc/models"
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
-type GoroutineState struct {
-	Id   int  `json:"id"`
-	Busy bool `json:"busy"`
-}
-
 type Agent struct {
-	mu              sync.Mutex
-	goroutineStates []GoroutineState
-	tasksBuffer     models.SeqTasksBuffer
+	serverURL string
+	mutex     sync.Mutex
 }
 
-// Запускает COMPUTING_POWER горутин
-func (a *Agent) StartRoutins(COMPUTING_POWER int) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	a.goroutineStates = make([]GoroutineState, COMPUTING_POWER)
-
-	for i := 0; i < COMPUTING_POWER; i++ {
-		a.goroutineStates[i] = GoroutineState{Id: i, Busy: false}
-		go a.worker(i)
+func NewAgent(serverURL string, computingPower int) *Agent {
+	agent := &Agent{
+		serverURL: serverURL,
 	}
+	for i := 0; i < computingPower; i++ {
+		go agent.worker()
+	}
+	return agent
 }
 
-func (a *Agent) worker(id int) {
-	a.mu.Lock()
-	a.goroutineStates[id].Busy = true
-	a.mu.Unlock()
+func (a *Agent) worker() {
+	for {
+		resp, err := http.Get(a.serverURL + "/internal/task")
+		if err != nil {
+			log.Println("Ошибка запроса задачи:", err)
+			time.Sleep(time.Second)
+			continue
+		}
 
-	// task = a.GetTasks() // Взятие задачи на выполнение
-	// result, err := функция_вычисления_выражения(task) и возврат в переменную
-	// обработка ошибки
+		if resp.StatusCode == http.StatusNotFound {
+			log.Println("Нет задач, ждем...")
+			time.Sleep(time.Second)
+			continue
+		}
 
-	a.mu.Lock()
-	a.goroutineStates[id].Busy = false
-	a.mu.Unlock()
+		var task struct {
+			Task models.Task `json:"task"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
+			log.Println("Ошибка декодирования задачи:", err)
+			continue
+		}
 
-}
+		resp.Body.Close()
 
-// Запрос задачи у оркестратора
-func (a *Agent) GetTask() models.Task {
-	url := "http://internal/tasks"
-	resp, err := http.Get(url)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return models.Task{}
-	}
-	defer resp.Body.Close()
+		log.Printf("Выполняем задачу ID %d: %.2f %s %.2f\n", task.Task.Id, task.Task.Arg1, task.Task.Operation, task.Task.Arg2)
+		time.Sleep(task.Task.Operation_time)
+		var result float64
+		switch task.Task.Operation {
+		case "+":
+			result = task.Task.Arg1 + task.Task.Arg2
+		case "-":
+			result = task.Task.Arg1 - task.Task.Arg2
+		case "*":
+			result = task.Task.Arg1 * task.Task.Arg2
+		case "/":
+			if task.Task.Arg2 != 0 {
+				result = task.Task.Arg1 / task.Task.Arg2
+			} else {
+				log.Printf("Ошибка: деление на ноль в задаче ID %d", task.Task.Id)
+				continue
+			}
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Error: received non-200 response status")
-		return models.Task{}
-	}
-
-	var task models.Task
-	if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
-		fmt.Println("Error decoding JSON:", err)
-		return models.Task{}
-	}
-
-	return task
-}
-
-// Поиск свободного вычислителя
-func (a *Agent) FindFreeCalc() []int {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	freeGoroutines := []int{}
-	for _, state := range a.goroutineStates {
-		if !state.Busy {
-			freeGoroutines = append(freeGoroutines, state.Id)
+		resultData, _ := json.Marshal(map[string]interface{}{"id": task.Task.Id, "result": result})
+		_, err = http.Post(a.serverURL+"/internal/task/result", "application/json", bytes.NewBuffer(resultData))
+		if err != nil {
+			log.Printf("Ошибка отправки результата задачи ID %d: %v", task.Task.Id, err)
 		}
 	}
-	return freeGoroutines
 }
 
-// Передача результата выражения оркестратору
-func (a *Agent) SendResult(result float64) {
-	url := "http://internal/task"
-	jsonData := []byte(fmt.Sprintf(`{"result": "%s"}`, result))
-
-	// Отправка POST-запроса
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-	defer resp.Body.Close()
+func StartServer(serverURL string, computingPower int) {
+	NewAgent(serverURL, computingPower)
+	select {} // Запуск в фоновом режиме
 }

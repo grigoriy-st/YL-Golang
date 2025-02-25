@@ -2,108 +2,182 @@ package orchestrator
 
 import (
 	"calc/models"
-	"regexp"
+	"encoding/json"
+	"log"
+	"math/rand"
+	"net/http"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
-
-type Orchestrator struct {
-}
 
 // Проверка буфера на свободные задачи
 func (o *Orchestrator) CheckBuffer() {
 
 }
 
-// Дробление выражение на задачи
-func (o *Orchestrator) ParseExpIntoTasks(exp string) models.Task, error {
-	tokens := tokenize(exp)
-	rpn := shuntingYard(tokens)
-	return convertToTasks(rpn), nil
+type Orchestrator struct {
+	expressions map[int]models.Expression
+	tasks       chan models.Task
+	mutex       sync.Mutex
 }
 
-// Токенизация выражения
-func tokenize(expr string) []string {
-	re := regexp.MustCompile(`\s*([+*/()-]|[0-9]*\.?[0-9]+)\s*`)
-	return re.FindAllString(expr, -1)
+func NewOrchestrator() *Orchestrator {
+	return &Orchestrator{
+		expressions: make(map[int]models.Expression),
+		tasks:       make(chan models.Task, 100),
+	}
 }
 
-// Алгоритм Шунтинг-Ярд для преобразования в ОПН
-func shuntingYard(tokens []string) []string {
+func precedence(op string) int {
+	switch op {
+	case "+", "-":
+		return 1
+	case "*", "/":
+		return 2
+	case "(":
+		return 0
+	}
+	return -1
+}
+
+func infixToRPN(expression string) ([]string, error) {
+	expression = strings.ReplaceAll(expression, " ", "")
 	var output []string
-	var stack []string
-
-	precedence := map[string]int{
-		"+": 1,
-		"-": 1,
-		"*": 2,
-		"/": 2,
-	}
-
-	for _, token := range tokens {
-		if isNumber(token) {
-			output = append(output, token)
-		} else if token == "(" {
-			stack = append(stack, token)
-		} else if token == ")" {
-			for len(stack) > 0 && stack[len(stack)-1] != "(" {
-				output = append(output, stack[len(stack)-1])
-				stack = stack[:len(stack)-1]
+	var operators []string
+	i := 0
+	for i < len(expression) {
+		if expression[i] >= '0' && expression[i] <= '9' {
+			num := ""
+			for i < len(expression) && (expression[i] >= '0' && expression[i] <= '9' || expression[i] == '.') {
+				num += string(expression[i])
+				i++
 			}
-			stack = stack[:len(stack)-1] // Удаляем "("
+			output = append(output, num)
+			continue
+		} else if expression[i] == '(' {
+			operators = append(operators, string(expression[i]))
+		} else if expression[i] == ')' {
+			for len(operators) > 0 && operators[len(operators)-1] != "(" {
+				output = append(output, operators[len(operators)-1])
+				operators = operators[:len(operators)-1]
+			}
+			if len(operators) > 0 {
+				operators = operators[:len(operators)-1]
+			}
 		} else {
-			for len(stack) > 0 && precedence[stack[len(stack)-1]] >= precedence[token] {
-				output = append(output, stack[len(stack)-1])
-				stack = stack[:len(stack)-1]
+			for len(operators) > 0 && precedence(operators[len(operators)-1]) >= precedence(string(expression[i])) {
+				output = append(output, operators[len(operators)-1])
+				operators = operators[:len(operators)-1]
 			}
-			stack = append(stack, token)
+			operators = append(operators, string(expression[i]))
 		}
+		i++
 	}
 
-	for len(stack) > 0 {
-		output = append(output, stack[len(stack)-1])
-		stack = stack[:len(stack)-1]
+	for len(operators) > 0 {
+		output = append(output, operators[len(operators)-1])
+		operators = operators[:len(operators)-1]
 	}
 
-	return output
+	return output, nil
 }
 
-// Проверка, является ли токен числом
-func isNumber(token string) bool {
-	_, err := strconv.ParseFloat(token, 64)
-	return err == nil
-}
+func (o *Orchestrator) AddExpression(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Expression string `json:"expression"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusUnprocessableEntity)
+		return
+	}
 
-// Преобразование ОПН в задачи
-func convertToTasks(rpn []string) []models.Task {
-	var stack []models.Task
-	var tasks []models.Task
-	taskBuffer := models.NewSeqTasksBuffer(100)
+	exprID := rand.Intn(1000000)
+	o.mutex.Lock()
+	o.expressions[exprID] = models.Expression{Id: exprID, Status: "processing"}
+	o.mutex.Unlock()
 
-	for _, token := range rpn {
-		if isNumber(token) {
-			value, _ := strconv.ParseFloat(token, 64)
-			stack = append(stack, models.Task{Arg1: value})
-		} else {
-			arg2 := stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
-			arg1 := stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
+	postfix, err := infixToRPN(req.Expression)
+	if err != nil {
+		http.Error(w, "Ошибка преобразования выражения", http.StatusUnprocessableEntity)
+		return
+	}
 
+	// Разбиваем выражение и создаем задачи
+	var arg1, arg2 float64
+	for _, token := range postfix {
+		if token == "+" || token == "-" || token == "*" || token == "/" {
+			// Создание задачи для операции
 			task := models.Task{
-				Id:        taskBuffer.GetIdForTask(),
-				Arg1:      arg1.Arg1,
-				Arg2:      arg2.Arg1,
-				Operation: token,
+				Id:             exprID,
+				Arg1:           arg1,
+				Arg2:           arg2,
+				Operation:      token,
+				Operation_time: 10 * time.Millisecond,
 			}
-			tasks = append(tasks, task)
-			taskBuffer.AppendTask(task)
+			o.tasks <- task
+		} else {
+			// Преобразуем токен в число
+			if num, err := strconv.ParseFloat(token, 64); err == nil {
+				// Присваиваем значение аргумента
+				if arg1 == 0 {
+					arg1 = num
+				} else {
+					arg2 = num
+				}
+			}
 		}
 	}
 
-	return tasks
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]int{"id": exprID})
 }
 
-// Выдача результатов
-func (o *Orchestrator) GiveResult() {
+func (o *Orchestrator) GetExpressions(w http.ResponseWriter, r *http.Request) {
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
+	json.NewEncoder(w).Encode(map[string]interface{}{"expressions": o.expressions})
+}
 
+func (o *Orchestrator) GetTask(w http.ResponseWriter, r *http.Request) {
+	select {
+	case task := <-o.tasks:
+		json.NewEncoder(w).Encode(map[string]models.Task{"task": task})
+	default:
+		http.Error(w, "No tasks available", http.StatusNotFound)
+	}
+}
+
+func (o *Orchestrator) ReceiveResult(w http.ResponseWriter, r *http.Request) {
+	var result struct {
+		ID     int     `json:"id"`
+		Result float64 `json:"result"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusUnprocessableEntity)
+		return
+	}
+
+	o.mutex.Lock()
+	expr, exists := o.expressions[result.ID]
+	if exists {
+		expr.Status = "completed"
+		expr.Result = result.Result
+		o.expressions[result.ID] = expr
+	}
+	o.mutex.Unlock()
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func StartServer() {
+	orchestrator := NewOrchestrator()
+	http.HandleFunc("/api/v1/calculate", orchestrator.AddExpression)
+	http.HandleFunc("/api/v1/expressions", orchestrator.GetExpressions)
+	http.HandleFunc("/internal/task", orchestrator.GetTask)
+	http.HandleFunc("/internal/task/result", orchestrator.ReceiveResult)
+
+	log.Println("Оркестратор запущен на порту 8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
