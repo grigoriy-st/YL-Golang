@@ -2,7 +2,8 @@ package main
 
 import (
 	"calc/internal/agent"
-	orchestrator "calc/internal/orhestrator"
+	orchestrator "calc/internal/orchectrator"
+
 	"log"
 	"os"
 	"strconv"
@@ -23,6 +24,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 		log.Println("Запуск оркестратора...")
+		// orchestrator.StartServer()
 		orchestrator.StartServer()
 	}()
 

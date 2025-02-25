@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"calc/models"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -134,12 +135,97 @@ func (o *Orchestrator) AddExpression(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int{"id": exprID})
 }
 
+// Функция для проверки, является ли строка числом
+func isNumeric(s string) bool {
+	_, err := strconv.Atoi(s)
+	return err == nil
+}
+
+// Обработчик получения выражений
+func (o *Orchestrator) HandleExpressions(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		// Проверяем, соответствует ли путь ожидаемому формату
+		if strings.HasPrefix(r.URL.Path, "/api/v1/expressions/") {
+			idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/expressions/")
+
+			if idStr != "" && isNumeric(idStr) {
+				o.GetExpressionByID(w, r)
+				return
+			}
+		} else if r.URL.Path == "/api/v1/expressions" {
+			fmt.Println("Пойман в 2")
+			o.GetExpressions(w, r)
+			return
+		}
+	}
+
+	http.Error(w, "Not found", http.StatusNotFound)
+}
+
+// Получение выражения по ID
+func (o *Orchestrator) GetExpressionByID(w http.ResponseWriter, r *http.Request) {
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
+
+	idStr := r.URL.Path[19:]
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{"expressions": "Not found"})
+		return
+	}
+
+	expr, exists := o.expressions[id]
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{"expressions": "Not found"})
+		return
+	}
+	response := map[string]interface{}{
+		"expression": map[string]interface{}{
+			"id":     expr.Id,
+			"status": expr.Status,
+			"result": expr.Result,
+		},
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+// Получение всех выражений
 func (o *Orchestrator) GetExpressions(w http.ResponseWriter, r *http.Request) {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
-	json.NewEncoder(w).Encode(map[string]interface{}{"expressions": o.expressions})
+
+	if len(o.expressions) == 0 {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"expressions": "Not found"})
+		return
+	}
+	var expressionsList []struct {
+		Id     int     `json:"id"`
+		Status string  `json:"status"`
+		Result float64 `json:"result"`
+	}
+
+	for _, exp := range o.expressions {
+		expressionsList = append(expressionsList, struct {
+			Id     int     `json:"id"`
+			Status string  `json:"status"`
+			Result float64 `json:"result"`
+		}{
+			Id:     exp.Id,
+			Status: exp.Status,
+			Result: exp.Result,
+		})
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"expressions": expressionsList})
 }
 
+// Получение задачи
 func (o *Orchestrator) GetTask(w http.ResponseWriter, r *http.Request) {
 	select {
 	case task := <-o.tasks:
@@ -149,6 +235,7 @@ func (o *Orchestrator) GetTask(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Получени результата
 func (o *Orchestrator) ReceiveResult(w http.ResponseWriter, r *http.Request) {
 	var result struct {
 		ID     int     `json:"id"`
@@ -174,7 +261,7 @@ func (o *Orchestrator) ReceiveResult(w http.ResponseWriter, r *http.Request) {
 func StartServer() {
 	orchestrator := NewOrchestrator()
 	http.HandleFunc("/api/v1/calculate", orchestrator.AddExpression)
-	http.HandleFunc("/api/v1/expressions", orchestrator.GetExpressions)
+	http.HandleFunc("/api/v1/expressions", orchestrator.HandleExpressions)
 	http.HandleFunc("/internal/task", orchestrator.GetTask)
 	http.HandleFunc("/internal/task/result", orchestrator.ReceiveResult)
 
