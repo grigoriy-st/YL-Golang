@@ -38,19 +38,15 @@ Arithmetic Expression Calculator API — это простой веб-серви
 git clone https://github.com/grigoriy-st/YL-Golang.git
 cd YL-Golang
 ```
-# Запуск сервиса
 
-<<<<<<< HEAD
-## Отправка простых запросов
+## Запуск сервиса
 
-=======
 ```bash
 go run cmd/main.go
 ```
 
-# Отправка успешных запросов 
+## Отправка успешных запросов
 
->>>>>>> 63ccc3569e649e51fe63336b19eee05249596226
 ```bash
 curl --location 'http://localhost:8080/api/v1/calculate' \
 --header 'Content-Type: application/json' \
@@ -58,6 +54,7 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
   "expression": "2+2*2"
 }'
 ```
+
 Результат:
 
 ```bash
@@ -71,12 +68,14 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
   "expression": "10*(4-2)/5"
 }'
 ```
+
 Результат:
+
 ```bash
 {"result":"4.000000"}
 ```
 
-# Отправка неудачных запросов 
+## Отправка неудачных запросов 
 
 ```bash
 curl --location 'http://localhost:8080/api/v1/calculate' \
@@ -85,8 +84,9 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
   "expression": "10(+10)"
 }'
 ```
+
 Результат:
-```
+
+```bash
 {"error":"Two operators in a row"}
 ```
-
