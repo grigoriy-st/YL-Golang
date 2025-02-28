@@ -2,8 +2,6 @@ package orchestrator
 
 import (
 	"calc/models"
-	"encoding/json"
-	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -11,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/labstack/echo"
 )
 
 // Проверка буфера на свободные задачи
@@ -85,13 +85,12 @@ func infixToRPN(expression string) ([]string, error) {
 	return output, nil
 }
 
-func (o *Orchestrator) AddExpression(w http.ResponseWriter, r *http.Request) {
+func (o *Orchestrator) AddExpression(c echo.Context) error {
 	var req struct {
 		Expression string `json:"expression"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusUnprocessableEntity)
-		return
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Invalid JSON"})
 	}
 
 	exprID := rand.Intn(1000000)
@@ -101,15 +100,12 @@ func (o *Orchestrator) AddExpression(w http.ResponseWriter, r *http.Request) {
 
 	postfix, err := infixToRPN(req.Expression)
 	if err != nil {
-		http.Error(w, "Ошибка преобразования выражения", http.StatusUnprocessableEntity)
-		return
+		return c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Ошибка преобразования выражения"})
 	}
 
-	// Разбиваем выражение и создаем задачи
 	var arg1, arg2 float64
 	for _, token := range postfix {
 		if token == "+" || token == "-" || token == "*" || token == "/" {
-			// Создание задачи для операции
 			task := models.Task{
 				Id:             exprID,
 				Arg1:           arg1,
@@ -119,9 +115,7 @@ func (o *Orchestrator) AddExpression(w http.ResponseWriter, r *http.Request) {
 			}
 			o.tasks <- task
 		} else {
-			// Преобразуем токен в число
 			if num, err := strconv.ParseFloat(token, 64); err == nil {
-				// Присваиваем значение аргумента
 				if arg1 == 0 {
 					arg1 = num
 				} else {
@@ -131,119 +125,61 @@ func (o *Orchestrator) AddExpression(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]int{"id": exprID})
+	return c.JSON(http.StatusCreated, echo.Map{"id": exprID})
 }
 
-// Функция для проверки, является ли строка числом
-func isNumeric(s string) bool {
-	_, err := strconv.Atoi(s)
-	return err == nil
-}
-
-// Обработчик получения выражений
-func (o *Orchestrator) HandleExpressions(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		// Проверяем, соответствует ли путь ожидаемому формату
-		if strings.HasPrefix(r.URL.Path, "/api/v1/expressions/") {
-			idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/expressions/")
-
-			if idStr != "" && isNumeric(idStr) {
-				o.GetExpressionByID(w, r)
-				return
-			}
-		} else if r.URL.Path == "/api/v1/expressions" {
-			fmt.Println("Пойман в 2")
-			o.GetExpressions(w, r)
-			return
-		}
-	}
-
-	http.Error(w, "Not found", http.StatusNotFound)
-}
-
-// Получение выражения по ID
-func (o *Orchestrator) GetExpressionByID(w http.ResponseWriter, r *http.Request) {
-	o.mutex.Lock()
-	defer o.mutex.Unlock()
-
-	idStr := r.URL.Path[19:]
-
-	id, err := strconv.Atoi(idStr)
+func (o *Orchestrator) GetExpressionByID(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]interface{}{"expressions": "Not found"})
-		return
+		return c.JSON(http.StatusNotFound, echo.Map{"expressions": "Not found"})
 	}
-
+	o.mutex.Lock()
 	expr, exists := o.expressions[id]
+	o.mutex.Unlock()
+
 	if !exists {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]interface{}{"expressions": "Not found"})
-		return
-	}
-	response := map[string]interface{}{
-		"expression": map[string]interface{}{
-			"id":     expr.Id,
-			"status": expr.Status,
-			"result": expr.Result,
-		},
+		return c.JSON(http.StatusNotFound, echo.Map{"expressions": "Not found"})
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	return c.JSON(http.StatusOK, echo.Map{"expression": expr})
 }
 
-// Получение всех выражений
-func (o *Orchestrator) GetExpressions(w http.ResponseWriter, r *http.Request) {
+func (o *Orchestrator) GetExpressions(c echo.Context) error {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
 
 	if len(o.expressions) == 0 {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{"expressions": "Not found"})
-		return
-	}
-	var expressionsList []struct {
-		Id     int     `json:"id"`
-		Status string  `json:"status"`
-		Result float64 `json:"result"`
+		return c.JSON(http.StatusInternalServerError, echo.Map{"expressions": "Not Found"})
 	}
 
+	var expressionsList []map[string]interface{}
 	for _, exp := range o.expressions {
-		expressionsList = append(expressionsList, struct {
-			Id     int     `json:"id"`
-			Status string  `json:"status"`
-			Result float64 `json:"result"`
-		}{
-			Id:     exp.Id,
-			Status: exp.Status,
-			Result: exp.Result,
+		expressionsList = append(expressionsList, map[string]interface{}{
+			"id":     exp.Id,
+			"status": exp.Status,
+			"result": exp.Result,
 		})
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"expressions": expressionsList})
+	return c.JSON(http.StatusOK, echo.Map{"expressions": expressionsList})
 }
 
-// Получение задачи
-func (o *Orchestrator) GetTask(w http.ResponseWriter, r *http.Request) {
+func (o *Orchestrator) GetTask(c echo.Context) error {
 	select {
 	case task := <-o.tasks:
-		json.NewEncoder(w).Encode(map[string]models.Task{"task": task})
+		return c.JSON(http.StatusOK, echo.Map{"task": task})
 	default:
-		http.Error(w, "No tasks available", http.StatusNotFound)
+		return c.JSON(http.StatusNotFound, echo.Map{"error": "No tasks available"})
 	}
 }
 
-// Получени результата
-func (o *Orchestrator) ReceiveResult(w http.ResponseWriter, r *http.Request) {
+func (o *Orchestrator) ReceiveResult(c echo.Context) error {
 	var result struct {
 		ID     int     `json:"id"`
 		Result float64 `json:"result"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusUnprocessableEntity)
-		return
+	if err := c.Bind(&result); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Invalid JSON"})
 	}
 
 	o.mutex.Lock()
@@ -255,16 +191,19 @@ func (o *Orchestrator) ReceiveResult(w http.ResponseWriter, r *http.Request) {
 	}
 	o.mutex.Unlock()
 
-	w.WriteHeader(http.StatusOK)
+	return c.NoContent(http.StatusOK)
 }
 
 func StartServer() {
+	e := echo.New()
 	orchestrator := NewOrchestrator()
-	http.HandleFunc("/api/v1/calculate", orchestrator.AddExpression)
-	http.HandleFunc("/api/v1/expressions", orchestrator.HandleExpressions)
-	http.HandleFunc("/internal/task", orchestrator.GetTask)
-	http.HandleFunc("/internal/task/result", orchestrator.ReceiveResult)
+
+	e.POST("/api/v1/calculate", orchestrator.AddExpression)
+	e.GET("/api/v1/expressions", orchestrator.GetExpressions)
+	e.GET("/api/v1/expressions/:id", orchestrator.GetExpressionByID)
+	e.GET("/internal/task", orchestrator.GetTask)
+	e.POST("/internal/task/result", orchestrator.ReceiveResult)
 
 	log.Println("Оркестратор запущен на порту 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	e.Logger.Fatal(e.Start(":8080"))
 }
