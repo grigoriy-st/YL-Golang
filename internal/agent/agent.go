@@ -50,7 +50,7 @@ func (a *Agent) worker() {
 
 		resp.Body.Close()
 
-		log.Printf("Выполняем задачу ID %d: %.2f %s %.2f\n", task.Task.Id, task.Task.Arg1, task.Task.Operation, task.Task.Arg2)
+		log.Printf("Выполняю задачу ID %d: %.2f %s %.2f\n", task.Task.Id, task.Task.Arg1, task.Task.Operation, task.Task.Arg2)
 		time.Sleep(task.Task.Operation_time)
 		var result float64
 		switch task.Task.Operation {
