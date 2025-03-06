@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -65,6 +66,25 @@ func infixToRPN(expression string) ([]string, error) {
 				operators = operators[:len(operators)-1]
 			}
 		} else {
+			// Проверка деление на 0
+			if expression[i] == '/' {
+
+				// Проверяем следующий символ, если он есть
+				if i+1 < len(expression) {
+					j := i + 1
+
+					// Пропускаем пробелы
+					for j < len(expression) && expression[j] == ' ' {
+						j++
+					}
+
+					// Проверяем, является ли следующий символ '0'
+					if j < len(expression) && expression[j] == '0' {
+						return nil, models.ErrDivisionByZero
+					}
+				}
+			}
+
 			for len(operators) > 0 && precedence(operators[len(operators)-1]) >= precedence(string(expression[i])) {
 				output = append(output, operators[len(operators)-1])
 				operators = operators[:len(operators)-1]
@@ -82,8 +102,29 @@ func infixToRPN(expression string) ([]string, error) {
 	return output, nil
 }
 
-// Добавление вырадение в оркестратор
+func isRightSequence(expression string) (bool, error) {
+	expression = strings.TrimSpace(expression)
+
+	// Проверка на пустую строку
+	if expression == "" {
+		return false, models.ErrInvalidExpression
+	}
+
+	re := regexp.MustCompile(`^\s*[0-9]+(\s*[\+\-\*/]\s*[0-9]+)*\s*$`)
+
+	if !re.MatchString(expression) {
+		return false, models.ErrInvalidExpression
+	}
+	return true, nil
+}
+
+// Добавление выражение в оркестратор
 func (o *Orchestrator) AddExpression(c echo.Context) error {
+	// Проверка метода запроса
+	if c.Request().Method != http.MethodPost {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Должен быть POST запрос для добавления выражения"})
+	}
+
 	var req struct {
 		Expression string `json:"expression"`
 	}
@@ -91,14 +132,31 @@ func (o *Orchestrator) AddExpression(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Invalid JSON"})
 	}
 
+	expression := req.Expression
 	exprID := rand.Intn(1000000) // генерация уникального идентификатора выражения
+
 	o.mutex.Lock()
-	o.expressions[exprID] = models.Expression{Id: exprID, Status: "processing"}
+	o.expressions[exprID] = models.Expression{Id: exprID,
+		Exp:    expression,
+		Status: "processing"}
 	o.mutex.Unlock()
 
-	postfix, err := infixToRPN(req.Expression)
+	_, err := isRightSequence(expression) // Проверка на правильную последовательность
 	if err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Ошибка преобразования выражения"})
+		o.mutex.Lock()
+		o.expressions[exprID] = models.Expression{Id: exprID,
+			Exp:    expression,
+			Status: "Completed with an error"}
+		o.mutex.Unlock()
+		return c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
+	}
+
+	postfix, err := infixToRPN(req.Expression) // Обработка по RPN
+	if err != nil {
+		o.mutex.Lock()
+		o.expressions[exprID] = models.Expression{Id: exprID, Status: "Completed with an error"}
+		o.mutex.Unlock()
+		return c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": err.Error()})
 	}
 
 	var arg1, arg2 float64
@@ -199,6 +257,7 @@ func StartServer() {
 	orchestrator := NewOrchestrator()
 
 	e.POST("/api/v1/calculate", orchestrator.AddExpression)
+	e.GET("/api/v1/calculate", orchestrator.AddExpression)
 	e.GET("/api/v1/expressions", orchestrator.GetExpressions)
 	e.GET("/api/v1/expressions/:id", orchestrator.GetExpressionByID)
 	e.GET("/internal/task", orchestrator.GetTask)

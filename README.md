@@ -185,6 +185,12 @@ git clone https://github.com/grigoriy-st/YL-Golang.git
 cd YL-Golang
 ```
 
+### Установка записимостей
+
+```bash
+go get github.com/labstack/echo/v4
+```
+
 ## Запуск сервиса
 
 ```bash
@@ -193,46 +199,103 @@ go run cmd/main.go
 
 ## Отправка успешных запросов
 
-```bash
-curl --location 'http://localhost:8080/api/v1/calculate' \
---header 'Content-Type: application/json' \
---data '{
-  "expression": "2+2*2"
-}'
-```
+<center>**Внимание!**<center>
 
-Результат:
+`ID` у выражений и задач будет всегда разное.
+Подставляйте в код `ID`, которые получились у вас.
 
-```bash
-{"result":"4.000000"}
-```
+- Добавление арифметического выражения на вычисление
 
-```bash
-curl --location 'http://localhost:8080/api/v1/calculate' \
---header 'Content-Type: application/json' \
---data '{
-  "expression": "10*(4-2)/5"
-}'
-```
+    ```bash
+    curl --location 'http://localhost:8080/api/v1/calculate' \
+    --header 'Content-Type: application/json' \
+    --data '{
+      "expression": "10 * 5"
+    }'
+    ```
+    
+    Результат:
 
-Результат:
+    ```json
+    {
+        "id": 822913
+    }
+    ```
 
-```bash
-{"result":"4.000000"}
-```
+- Получение списка выражений
+
+    ```bash
+    curl --location 'localhost/api/v1/expressions'
+    ```
+
+    Результат:
+
+    ```json
+    {
+        "expressions": [
+            {
+                "id": 822913,
+                "result": 50,
+                "status": "completed"
+            }
+        ]
+    }
+    ```
+
+- Получение выражения по его идентификатору
+
+    ```bash
+    curl --location 'localhost/api/v1/expressions/822913'
+    ```
+
+    Результат:
+
+    ```json
+    {
+        "expression": {
+            "id": 822913,
+            "exp": "10 * 5",
+            "Status": "completed",
+            "Result": 50
+        }
+    }
+    ```
 
 ## Отправка неудачных запросов 
 
-```bash
-curl --location 'http://localhost:8080/api/v1/calculate' \
---header 'Content-Type: application/json' \
---data '{
-  "expression": "10(+10)"
-}'
-```
+- Отправка GET-запроса на добавление выражения для вычисления.
+    
+    ```bash
 
-Результат:
+    curl --location 'localhost/api/v1/calculate' \
+    --header 'Content-Type: application/json' \
+    --data '{
+      "expression": "10 /" 
+    }'
+    ```
 
-```bash
-{"error":"Two operators in a row"}
-```
+    Результат:
+
+    ```json
+    {
+        "error": "Invalid expression"
+    }
+    ```
+
+- Отправка выражения с делением на 0
+
+    ```bash
+    curl --location 'localhost/api/v1/calculate' \
+    --header 'Content-Type: application/json' \
+    --data '{
+      "expression": "10 /" 
+    }'
+    ```
+
+    Результат:
+    
+    ```json
+    {
+        "error":"Division by zero"
+    }
+    ```
