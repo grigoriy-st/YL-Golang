@@ -13,11 +13,6 @@ import (
 	"github.com/labstack/echo"
 )
 
-// Проверка буфера на свободные задачи
-func (o *Orchestrator) CheckBuffer() {
-
-}
-
 type Orchestrator struct {
 	expressions map[int]models.Expression
 	tasks       chan models.Task
@@ -31,6 +26,7 @@ func NewOrchestrator() *Orchestrator {
 	}
 }
 
+// Определение приоритета операции
 func precedence(op string) int {
 	switch op {
 	case "+", "-":
@@ -85,6 +81,7 @@ func infixToRPN(expression string) ([]string, error) {
 	return output, nil
 }
 
+// Добавление вырадение в оркестратор
 func (o *Orchestrator) AddExpression(c echo.Context) error {
 	var req struct {
 		Expression string `json:"expression"`
@@ -93,7 +90,7 @@ func (o *Orchestrator) AddExpression(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, echo.Map{"error": "Invalid JSON"})
 	}
 
-	exprID := rand.Intn(1000000)
+	exprID := rand.Intn(1000000) // генерация уникального идентификатора выражения
 	o.mutex.Lock()
 	o.expressions[exprID] = models.Expression{Id: exprID, Status: "processing"}
 	o.mutex.Unlock()
@@ -173,6 +170,7 @@ func (o *Orchestrator) GetTask(c echo.Context) error {
 	}
 }
 
+// Получение результата
 func (o *Orchestrator) ReceiveResult(c echo.Context) error {
 	var result struct {
 		ID     int     `json:"id"`
@@ -194,6 +192,7 @@ func (o *Orchestrator) ReceiveResult(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+// Запуск сервера
 func StartServer() {
 	e := echo.New()
 	orchestrator := NewOrchestrator()
