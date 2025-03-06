@@ -288,7 +288,7 @@ go run cmd/main.go
     curl --location 'localhost/api/v1/calculate' \
     --header 'Content-Type: application/json' \
     --data '{
-      "expression": "10 /" 
+      "expression": "10 / 0" 
     }'
     ```
 
