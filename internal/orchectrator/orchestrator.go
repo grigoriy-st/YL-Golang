@@ -39,6 +39,7 @@ func precedence(op string) int {
 	return -1
 }
 
+// Преобразование выражения по RPN
 func infixToRPN(expression string) ([]string, error) {
 	expression = strings.ReplaceAll(expression, " ", "")
 	var output []string
