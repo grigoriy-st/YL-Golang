@@ -102,18 +102,19 @@ func infixToRPN(expression string) ([]string, error) {
 	return output, nil
 }
 
+// Проверка строки на корректную
 func isRightSequence(expression string) (bool, error) {
 	expression = strings.TrimSpace(expression)
 
 	// Проверка на пустую строку
 	if expression == "" {
-		return false, models.ErrInvalidExpression
+		return false, models.ErrExpIsEmpty
 	}
 
-	re := regexp.MustCompile(`^\s*[0-9]+(\s*[\+\-\*/]\s*[0-9]+)*\s*$`)
+	re := regexp.MustCompile(`^\s*[\d]+(\s*[\+\-\*\/]\s*[\d]+)*\s*|\(\s*[\d]+(\s*[\+\-\*\/]\s*[\d]+)*\s*\)$`)
 
 	if !re.MatchString(expression) {
-		return false, models.ErrInvalidExpression
+		return false, models.ErrExpDoesNotMatchRegEx
 	}
 	return true, nil
 }
