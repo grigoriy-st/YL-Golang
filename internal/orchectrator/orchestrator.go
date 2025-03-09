@@ -255,6 +255,9 @@ func (o *Orchestrator) ReceiveResult(c echo.Context) error {
 // Запуск сервера
 func StartServer() {
 	e := echo.New()
+	e.Static("/static", "web/static")
+	e.Static("/css", "web/static/css")
+	e.Static("/js", "web/static/js")
 	orchestrator := NewOrchestrator()
 
 	e.POST("/api/v1/calculate", orchestrator.AddExpression)
@@ -263,6 +266,19 @@ func StartServer() {
 	e.GET("/api/v1/expressions/:id", orchestrator.GetExpressionByID)
 	e.GET("/internal/task", orchestrator.GetTask)
 	e.POST("/internal/task/result", orchestrator.ReceiveResult)
+
+	// Web interface
+	e.GET("/calculate", func(c echo.Context) error {
+		return c.File("web/static/html/index.html")
+	})
+
+	e.GET("/expressions", func(c echo.Context) error {
+		return c.File("web/static/html/expressions.html")
+	})
+
+	e.GET("/about_expression/:id", func(c echo.Context) error {
+		return c.File("web/static/html/about_expression.html")
+	})
 
 	log.Println("Оркестратор запущен на порту 8080")
 	e.Logger.Fatal(e.Start(":8080"))
