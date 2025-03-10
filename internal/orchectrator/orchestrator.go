@@ -102,18 +102,19 @@ func infixToRPN(expression string) ([]string, error) {
 	return output, nil
 }
 
+// Проверка строки на корректную
 func isRightSequence(expression string) (bool, error) {
 	expression = strings.TrimSpace(expression)
 
 	// Проверка на пустую строку
 	if expression == "" {
-		return false, models.ErrInvalidExpression
+		return false, models.ErrExpIsEmpty
 	}
 
-	re := regexp.MustCompile(`^\s*[0-9]+(\s*[\+\-\*/]\s*[0-9]+)*\s*$`)
+	re := regexp.MustCompile(`^\s*[\d]+(\s*[\+\-\*\/]\s*[\d]+)*\s*|\(\s*[\d]+(\s*[\+\-\*\/]\s*[\d]+)*\s*\)$`)
 
 	if !re.MatchString(expression) {
-		return false, models.ErrInvalidExpression
+		return false, models.ErrExpDoesNotMatchRegEx
 	}
 	return true, nil
 }
@@ -254,6 +255,9 @@ func (o *Orchestrator) ReceiveResult(c echo.Context) error {
 // Запуск сервера
 func StartServer() {
 	e := echo.New()
+	e.Static("/static", "web/static")
+	e.Static("/css", "web/static/css")
+	e.Static("/js", "web/static/js")
 	orchestrator := NewOrchestrator()
 
 	e.POST("/api/v1/calculate", orchestrator.AddExpression)
@@ -262,6 +266,19 @@ func StartServer() {
 	e.GET("/api/v1/expressions/:id", orchestrator.GetExpressionByID)
 	e.GET("/internal/task", orchestrator.GetTask)
 	e.POST("/internal/task/result", orchestrator.ReceiveResult)
+
+	// Web interface
+	e.GET("/calculate", func(c echo.Context) error {
+		return c.File("web/static/html/index.html")
+	})
+
+	e.GET("/expressions", func(c echo.Context) error {
+		return c.File("web/static/html/expressions.html")
+	})
+
+	e.GET("/about_expression/:id", func(c echo.Context) error {
+		return c.File("web/static/html/about_expression.html")
+	})
 
 	log.Println("Оркестратор запущен на порту 8080")
 	e.Logger.Fatal(e.Start(":8080"))

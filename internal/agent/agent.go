@@ -11,13 +11,15 @@ import (
 )
 
 type Agent struct {
-	serverURL string
-	mutex     sync.Mutex
+	serverURL     string
+	mutex         sync.Mutex
+	currentResult float64 // Добавлено для хранения текущего результата
 }
 
 func NewAgent(serverURL string, computingPower int) *Agent {
 	agent := &Agent{
-		serverURL: serverURL,
+		serverURL:     serverURL,
+		currentResult: 0, // Инициализация текущего результата
 	}
 	for i := 0; i < computingPower; i++ {
 		go agent.worker()
@@ -52,22 +54,32 @@ func (a *Agent) worker() {
 
 		log.Printf("Выполняю задачу ID %d: %.2f %s %.2f\n", task.Task.Id, task.Task.Arg1, task.Task.Operation, task.Task.Arg2)
 		time.Sleep(task.Task.Operation_time)
+
+		// Используем текущий результат для вычисления
 		var result float64
+		if task.Task.Id == 1 { // Если это первая задача, используем Arg1
+			result = task.Task.Arg1
+		} else {
+			result = a.currentResult // Используем текущий результат для последующих задач
+		}
+
 		switch task.Task.Operation {
 		case "+":
-			result = task.Task.Arg1 + task.Task.Arg2
+			result += task.Task.Arg2
 		case "-":
-			result = task.Task.Arg1 - task.Task.Arg2
+			result -= task.Task.Arg2
 		case "*":
-			result = task.Task.Arg1 * task.Task.Arg2
+			result *= task.Task.Arg2
 		case "/":
 			if task.Task.Arg2 != 0 {
-				result = task.Task.Arg1 / task.Task.Arg2
+				result /= task.Task.Arg2
 			} else {
 				log.Printf("Ошибка: деление на ноль в задаче ID %d", task.Task.Id)
 				continue
 			}
 		}
+
+		a.currentResult = result // Сохраняем текущий результат
 
 		resultData, _ := json.Marshal(map[string]interface{}{"id": task.Task.Id, "result": result})
 		_, err = http.Post(a.serverURL+"/internal/task/result", "application/json", bytes.NewBuffer(resultData))

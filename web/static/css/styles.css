@@ -1,5 +1,6 @@
 body {
     font-family: Arial, sans-serif;
+<<<<<<< HEAD
     background-color: #f4f4f4;
     margin: 0;
     padding: 20px;
@@ -51,3 +52,17 @@ li {
     padding: 10px;
     border-bottom: 1px solid #ccc;
 }
+=======
+    text-align: center;
+}
+form {
+    margin: 20px;
+}
+input {
+    padding: 5px;
+}
+button {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+>>>>>>> edeab331d392b845ac68d796f47099bac3d7bc9d
