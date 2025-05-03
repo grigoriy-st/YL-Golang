@@ -10,6 +10,41 @@ Arithmetic Expression Calculator API — это простой веб-серви
 
 ## Описание проекта
 
+### Как запустить проект?
+
+Клонирование репозитория
+```sh
+git clone https://github.com/grigoriy-st/YL-Golang
+```
+
+Копирование переменных
+```sh
+cp .env.example .env
+```
+
+Копирование переменных
+```sh
+cd frontend; cp .env.example .env
+```
+
+Запуск docker-compose
+```sh
+docker-compose up
+```
+
+Сборка билда агентов
+```sh
+go build -o build/agent cmd/agent/main.go
+```
+
+```sh
+build/agent -agent Agent -ping 60 -threads 10 -url amqp://guest:guest@localhost:5672 -wait 10
+```
+
+Работает на 80-порте
+```sh
+127.0.0.1:80
+```
 ### Back-end
 
 Состоит из 2 элементов:
@@ -299,3 +334,4 @@ go run cmd/main.go
         "error":"Division by zero"
     }
     ```
+
