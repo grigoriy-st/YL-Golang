@@ -1,1 +1,5 @@
-.swp
+.env
+.idea
+build/*
+database/*
+logs
