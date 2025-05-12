@@ -6,7 +6,7 @@
 
 Arithmetic Expression Calculator API — это простой веб-сервис, который позволяет пользователям отправлять арифметические выражения и получать результаты их вычисления. Сервис поддерживает базовые арифметические операции, такие как сложение, вычитание, умножение и деление.
 
-![Схема работы сервиса](https://github.com/grigoriy-st/YL-Golang/blob/main/docs/Dist_calc_scheme.png?raw=true)
+![Схема работы сервиса](https://github.com/grigoriy-st/YL-Golang/blob/main/docs/Calc_scheme.png?raw=true)
 
 ## Описание проекта
 
